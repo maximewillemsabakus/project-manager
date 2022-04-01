@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
-import {BsPlusLg} from "react-icons/bs"
+import { BsPlusLg } from "react-icons/bs"
+import { copyBranch, createBranche, deleteBranch, getBranches, startBranch, stopBranch } from "./actions/branch"
+import { createProject, deleteProject, getProjects } from "./actions/project"
+import { signInWithGoogle } from "./actions/connect"
 
 export function Abakus(){
     let [user, setUser] = useState({})
@@ -10,7 +13,9 @@ export function Abakus(){
     return <div className={`pt-20 text-white bg-stone overflow-hidden`}>
         {!user.isConnected ? 
             <Projects reload={() => reload(setData)} projects={data} /> : 
-            <div></div>
+            <div>
+                <Button onClick={() => signInWithGoogle()} color={"bg-blue-500 hover:bg-blue-600"}>Connect</Button>
+            </div>
         }
     </div>
 }
@@ -19,7 +24,7 @@ function Projects({projects, reload}){
     return <div className="overflow-auto">
         <CreationForm reload={reload}></CreationForm>
         {projects.length === 0 ? <Text>No projects</Text>: projects.map(project => 
-            <Project reload={reload} id={project.id} name={project.name} git={project.git} version={project.version} edition={project.edition}>
+            <Project key={project.id} reload={reload} id={project.id} name={project.name} git={project.git} version={project.version} edition={project.edition}>
                 <Branches project_id={project.id} />
             </Project>
         )}
@@ -39,9 +44,11 @@ function BrancheCreator({project_id, reload}){
             </div>
             <div className="flex justify-center">
                 <Button onClick={() => {
-                    createBranche(project_id, name, type, reload)
+                    if(name.trim() !== "" && type.trim() !== ""){
+                        createBranche(project_id, name, type, reload)
+                    }
                     setActive(false)
-                }} color={`bg-green-500`}>Create</Button>
+                }} color={`bg-green-500 hover:bg-green-600`}>Create</Button>
             </div>
         </> : <BsPlusLg className="w-full text-black transform transition-transform ease-in-out hover:scale-100 scale-90" size={100}></BsPlusLg>
         }
@@ -58,12 +65,12 @@ function Input({children, value, onChange, color}){
 function Branches({project_id}){
     let [branches, setBranches] = useState([])
     let reloadBranches = (setBranches, project_id) => getBranches(setBranches, project_id)
-    useEffect(() => reloadBranches(setBranches, project_id), [])
+    useEffect(() => reloadBranches(setBranches, project_id), [project_id])
     
     return <div className="flex flex-row space-x-4">
         <BrancheCreator project_id={project_id} reload={() => reloadBranches(setBranches, project_id)} />
         {branches.length === 0 ? "": branches.map(branch => 
-            <Branche project_id={project_id} name={branch.name} type={branch.type} url={branch.url} status={branch.status} reload={() => reloadBranches(setBranches, project_id)} />
+            <Branche key={branch.name} project_id={project_id} name={branch.name} type={branch.type} url={branch.url} status={branch.status} reload={() => reloadBranches(setBranches, project_id)} />
         )}
     </div>
 }
@@ -76,6 +83,7 @@ function Project({children, id, git, name, version, edition, reload}){
             <Text>version : {version}</Text>
             <Text>Edition : {edition}</Text>
             <Button onClick={() => deleteProject(id, reload)} color={`bg-red-500 hover:bg-red-600`}>Delete</Button>
+            <Button onClick={() => print()} color={`bg-purple-500 hover:bg-purple-600`}>Copy</Button>
         </div>
         {children}
     </div>
@@ -146,7 +154,7 @@ function Select({list, children, onChange}){
     return <div className="flex flex-col my-auto">
         <label className="pl-1">{children}</label>
         <select className={`bg-gray-800 rounded-md text-white border-2 border-black h-8 pl-1 pr-1`} onChange={onChange}>
-            {list.map(e => <option>{e}</option>)}
+            {list.map(e => <option key={e}>{e}</option>)}
         </select>
     </div>
 }
@@ -173,79 +181,6 @@ function CreationForm({reload}){
     </div>
 }
 
-async function getProjects(setData){
-    setData(
-        JSON.parse(
-            await fetch("https://api.sh.abakus.be/projects/")
-                .then(e => e.text())
-        )
-    )
-}
-
-async function createBranche(project_id, name, type, reload){
-    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/create`, {
-         method: "POST",
-         headers: new Headers({"Content-Type": "application/json"}),
-         body: JSON.stringify({"name": name, "type": type})
-     }).then(e => e.text())
-     reload()
- }
- 
- async function getBranches(setData, project_id){
-     setData(
-         JSON.parse(
-             await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/`)
-                 .then(e => e.text())
-         )
-     )
- }
-
-async function createProject(name, url, version, edition, reload){
-    await fetch("https://api.sh.abakus.be/projects/create", {
-        method: "POST",
-        headers: new Headers({"Content-Type": "application/json"}),
-        body: JSON.stringify({"name": name, "url": url, "version": version, "edition": edition})
-    }).then(e => console.log(e))
-    reload()
-}
-
-async function startBranch(project_id, branch_name, reload){
-    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/start`, {
-        method: "POST",
-        headers: new Headers({"Content-Type": "application/json"}),
-    }).then(e => console.log(e))
-    reload()
-}
-
-async function stopBranch(project_id, branch_name, reload){
-    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/stop`, {
-        method: "POST",
-        headers: new Headers({"Content-Type": "application/json"}),
-    }).then(e => console.log(e))
-    reload()
-}
-
-async function deleteBranch(project_id, branch_name, reload){
-    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/delete`, {
-        method: 'DELETE',
-        headers: new Headers({"Content-Type": "application/json"}),
-    }).then(e => console.log(e))
-    reload()
-}
-
-async function deleteProject(id, reload) {
-    await fetch(`https://api.sh.abakus.be/projects/${id}/delete`, {
-        method: 'DELETE',
-        headers: new Headers({"Content-Type": "application/json"}),
-    }).then(e => console.log(e))
-    reload()
-}
-
-async function copyBranch(srcName, srcDbName, destName, destDbName, reload){
-    await fetch("https://api.sh.abakus.be/applications/copy", {
-        method: "POST",
-        headers: new Headers({"Content-Type": "application/json"}),
-        body: JSON.stringify({"srcName": srcName, "destName": destName, "srcDbName": srcDbName, "destDbName": destDbName})
-    }).then(e => console.log(e))
-    reload()
+function print(str=""){
+    console.log(str)
 }

@@ -1,11 +1,7 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import * as ReactDOMClient from 'react-dom/client';
 import { Abakus } from './Abakus';
 import "./css/index.css"
 
-ReactDOM.render(
-  <React.StrictMode>
-    <Abakus />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+const root = ReactDOMClient.createRoot(document.getElementById('root'))
+root.render(<Abakus />)
