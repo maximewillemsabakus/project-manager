@@ -2,19 +2,24 @@ import { useEffect, useState } from "react"
 import { BsPlusLg } from "react-icons/bs"
 import { copyBranch, createBranche, deleteBranch, getBranches, startBranch, stopBranch } from "./actions/branch"
 import { createProject, deleteProject, getProjects } from "./actions/project"
-import { signInWithGoogle } from "./actions/connect"
+import { isValid, signInWithMicrosoft } from "./actions/connect"
 
 export function Abakus(){
-    let [user, setUser] = useState({})
+    let [valid, setValid] = useState(false)
     let [data, setData] = useState([])
-    let reload = (setData) => getProjects(setData)
-    useEffect(() => reload(setData), [])
+    let reloads = (setData) => getProjects(setData)
+    useEffect(() => {
+        async function reload(){
+            getProjects(setData)
+        }
+        reload()
+    }, [])
 
-    return <div className={`pt-20 text-white bg-stone overflow-hidden`}>
-        {!user.isConnected ? 
-            <Projects reload={() => reload(setData)} projects={data} /> : 
-            <div>
-                <Button onClick={() => signInWithGoogle()} color={"bg-blue-500 hover:bg-blue-600"}>Connect</Button>
+    return <div className={`pt-20 h-full text-white bg-stone overflow-hidden`}>
+        {valid ? 
+            <Projects reload={() => reloads(setData)} projects={data} /> : 
+            <div className="flex justify-center">
+                <Button onClick={async () => setValid(isValid(await signInWithMicrosoft()))} color={"bg-blue-500 hover:bg-blue-600"}>Connect</Button>
             </div>
         }
     </div>
@@ -36,7 +41,7 @@ function BrancheCreator({project_id, reload}){
     let [type, setType] = useState("")
     let [active, setActive] = useState(false)
 
-    return <div className={`flex flex-col justify-around h-60 w-60 bg-gray-200 rounded-3xl ${active ? "" : "cursor-pointer"}`} onClick={() => active ? "" : setActive(true)} >
+    return <div className={`flex flex-col justify-around h-60 w-60 bg-white rounded-3xl ${active ? "" : "cursor-pointer"}`} onClick={() => active ? "" : setActive(true)} >
         {active ? <>
             <div>
                 <Input color={`text-black`} value={name} onChange={e => setName(e.target.value)}>Name</Input>
@@ -64,13 +69,19 @@ function Input({children, value, onChange, color}){
 
 function Branches({project_id}){
     let [branches, setBranches] = useState([])
-    let reloadBranches = (setBranches, project_id) => getBranches(setBranches, project_id)
-    useEffect(() => reloadBranches(setBranches, project_id), [project_id])
+    let reloadsBranches = async (setBranches, project_id) => getBranches(setBranches, project_id)
+
+    useEffect(() => {
+        async function reload(){
+            getBranches(setBranches, project_id)
+        }
+        reload()
+    }, [project_id])
     
     return <div className="flex flex-row space-x-4">
-        <BrancheCreator project_id={project_id} reload={() => reloadBranches(setBranches, project_id)} />
+        <BrancheCreator project_id={project_id} reload={() => reloadsBranches(setBranches, project_id)} />
         {branches.length === 0 ? "": branches.map(branch => 
-            <Branche key={branch.name} project_id={project_id} name={branch.name} type={branch.type} url={branch.url} status={branch.status} reload={() => reloadBranches(setBranches, project_id)} />
+            <Branche key={branch.name} project_id={project_id} name={branch.name} type={branch.type} url={branch.url} status={branch.status} reload={() => reloadsBranches(setBranches, project_id)} />
         )}
     </div>
 }
@@ -83,7 +94,7 @@ function Project({children, id, git, name, version, edition, reload}){
             <Text>version : {version}</Text>
             <Text>Edition : {edition}</Text>
             <Button onClick={() => deleteProject(id, reload)} color={`bg-red-500 hover:bg-red-600`}>Delete</Button>
-            <Button onClick={() => print()} color={`bg-purple-500 hover:bg-purple-600`}>Copy</Button>
+            <Button onClick={() => console.log()} color={`bg-purple-500 hover:bg-purple-600`}>Copy</Button>
         </div>
         {children}
     </div>
@@ -94,7 +105,7 @@ function Text({children}){
 }
 
 function Branche({project_id, name, type, url, status, reload}){
-    return <div className={`flex flex-col justify-between h-60 bg-gray-200 rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
+    return <div className={`flex flex-col justify-between h-60 bg-white rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
         <div className="space-y-4">
             <Text>BRANCHE : {name}</Text>
             <Text>TYPE : {type}</Text>
@@ -106,7 +117,7 @@ function Branche({project_id, name, type, url, status, reload}){
 }
 
 function Link({href, children}){
-    return <a className={`text-blue-500 hover:text-blue-400 hover:underline`} href={href}>{children}</a>
+    return <a className={`text-blue-500 hover:text-blue-400 hover:underline`} target="_blank" href={href}>{children}</a>
 }
 
 function Buttons({status, branch_name, project_id, reload}){
@@ -179,8 +190,4 @@ function CreationForm({reload}){
             <Button onClick={() => createProject(name, url, version, edition, reload)} color={`bg-green-500 hover:bg-green-600`}>Create</Button>
         </div>
     </div>
-}
-
-function print(str=""){
-    console.log(str)
 }
