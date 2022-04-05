@@ -4,5 +4,8 @@ export async function getTypes(){
         .then(e => JSON.parse(e))
         .then(types => 
             types.map(type => type.name)
-        )
+        ).then(types => {
+            types.sort()
+            return types
+        })
 }

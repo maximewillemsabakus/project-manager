@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react"
+
+import { Button } from "../components/Button"
+import { Link, Text } from "../components/Text"
+import { Input, Select } from "../components/Inputs"
+
 import { BsPlusLg } from "react-icons/bs"
-import { copyBranch, createBranche, deleteBranch, getBranches, startBranch, stopBranch } from "./actions/branch"
-import { createProject, deleteProject, getProjects } from "./actions/project"
-import { isValid, signInWithMicrosoft } from "./actions/connect"
-import { getTypes } from "./actions/type"
+
+import { isValid, signInWithMicrosoft } from "../actions/connect"
+
+import { copyBranch, createBranche, deleteBranch, getBranches, rebuildBranch, startBranch, stopBranch } from "../actions/branch"
+import { createProject, deleteProject, getProjects } from "../actions/project"
+import { getTypes } from "../actions/type"
 
 export function Abakus(){
     let [valid, setValid] = useState(false)
@@ -12,7 +19,7 @@ export function Abakus(){
         {valid ? 
             <Projects /> : 
             <div className="flex justify-center">
-                <Button onClick={async () => setValid(isValid(await signInWithMicrosoft()))} color={"bg-blue-500 hover:bg-blue-600"}>Connect</Button>
+                <Button onClick={async () => setValid(isValid(await signInWithMicrosoft()))} color="blue">Connexion</Button>
             </div>
         }
     </div>
@@ -28,9 +35,9 @@ function Projects(){
         reload()
     }, [])
 
-    return <div className="overflow-auto">
+    return <div className="overflow-y-auto h-full">
         <CreationForm reload={reloads}></CreationForm>
-        {projects.length === 0 ? <Text>No projects</Text>: projects.map(project => 
+        {projects.length === 0 ? <div className="m-2"><Text>Aucun projets</Text></div>: projects.map(project => 
             <Project key={project.id} reload={reloads} id={project.id} name={project.name} git={project.git} version={project.version} edition={project.edition}>
                 <Branches project_id={project.id} />
             </Project>
@@ -51,10 +58,10 @@ function BrancheCreator({project_id, reload}){
         loadTypes()
     }, [])
 
-    return <div className={`flex flex-col justify-around h-60 w-60 bg-white rounded-3xl ${active ? "" : "cursor-pointer"}`} onClick={() => active ? "" : setActive(true)} >
+    return <div className={`flex flex-col justify-around h-60 w-60 bg-gradient-to-t rounded-3xl ${active ? "from-white to-white" : "cursor-pointer from-slate-400 to-blue-200"}`} onClick={() => active ? "" : setActive(true)} >
         {active ? <>
             <div>
-                <Input color={`text-black`} value={name} onChange={e => setName(e.target.value)}>Name</Input>
+                <Input color={`text-black`} value={name} onChange={e => setName(e.target.value)}>Nom</Input>
                 <Select color={"text-black"} list={types} onChange={(e) => setType(e.target.value)}>Type</Select>
             </div>
             <div className="flex justify-center">
@@ -65,20 +72,14 @@ function BrancheCreator({project_id, reload}){
                         }
                         createBranche(project_id, name, type, reload)
                         setName("")
+                        setType(types[0])
                     }
                     setActive(false)
-                }} color={`bg-green-500 hover:bg-green-600`}>Create</Button>
+                }} color="green">Créer</Button>
             </div>
         </> : <BsPlusLg className="w-full text-black transform transition-transform ease-in-out hover:scale-100 scale-90" size={100}></BsPlusLg>
         }
      </div>
-}
-
-function Input({children, value, onChange, color}){
-    return <div className={`flex flex-col ${color} m-2`}>
-        <label className="pl-1">{children}</label>
-        <input className={`bg-gray-800 rounded-md text-white border-2 border-black h-8 pl-1 pr-1`} value={value} onChange={onChange}></input>
-    </div>
 }
 
 function Branches({project_id}){
@@ -102,20 +103,16 @@ function Branches({project_id}){
 
 function Project({children, id, git, name, version, edition, reload}){
     return <div className="border-2 mt-2 ml-2 mr-2 p-2">
-        <div className="flex flex-row space-x-8 mb-2">
-            <Text>Name : {name}</Text>
+        <div className="flex flex-row space-x-8 mb-2 ">
+            <Text>Nom : {name}</Text>
             <Text>Git : <Link href={`https://github.com/${git}`}>{git}</Link></Text>
-            <Text>version : {version}</Text>
+            <Text>Version : {version}</Text>
             <Text>Edition : {edition}</Text>
-            <Button onClick={() => deleteProject(id, reload)} color={`bg-red-500 hover:bg-red-600`}>Delete</Button>
-            <Button onClick={() => console.log()} color={`bg-purple-500 hover:bg-purple-600`}>Copy</Button>
+            <Button onClick={() => deleteProject(id, reload)} color="red">Supprimer</Button>
+            <Button onClick={() => console.log()} color="purple">Copier</Button>
         </div>
         {children}
     </div>
-}
-
-function Text({children}){
-    return <h3 className="my-auto">{children}</h3>
 }
 
 function Branche({project_id, name, type, url, status, reload}){
@@ -124,63 +121,23 @@ function Branche({project_id, name, type, url, status, reload}){
             <Text>BRANCHE : {name}</Text>
             <Text>TYPE : {type}</Text>
             <Text>URL : {status === "active" ? <Link href={url}>{url}</Link> : <span>{url}</span>}</Text>
-            <Text>Status : <span className={`${status === "active" ? `text-green-500` : `text-red-500`}`}>{status}</span></Text>
+            <Text>STATUS :
+                <span className={`${status === "active" ? `text-green-500` : `text-red-500`}`}> {status}</span>
+            </Text>
         </div>
         <Buttons project_id={project_id} branch_name={name} status={status} reload={reload}></Buttons>
     </div>
 }
 
-function Link({href, children}){
-    return <a className={`text-blue-500 hover:text-blue-400 hover:underline`} target="_blank" href={href}>{children}</a>
-}
-
 function Buttons({status, branch_name, project_id, reload}){
-    return <div className="flex justify-between space-x-4 p-2">
+    return <div className="flex justify-between space-x-4 p-2 bg-">
         {status === "active" ? 
-            <Button onClick={() => stopBranch(project_id, branch_name, reload)} color={`bg-yellow-300 hover:bg-yellow-400`}>Stop</Button> :
-            <Button onClick={() => startBranch(project_id, branch_name, reload)} color={`bg-green-500 hover:bg-green-600`}>Start</Button>  
+            <Button onClick={() => stopBranch(project_id, branch_name, reload)} color="yellow">Stop</Button> :
+            <Button onClick={() => startBranch(project_id, branch_name, reload)} color="green">Start</Button>  
         }
-        <Button color={`bg-yellow-500 hover:bg-yellow-600`}>Edit</Button>
-        <Button color={`bg-purple-500 hover:bg-purple-600`}>Rebuild</Button>
-        <Button onClick={() => deleteBranch(project_id, branch_name, reload)} color={`bg-red-500 hover:bg-red-600`}>Delete</Button>
-    </div>
-}
-
-function CopyForm({reload}){
-    let [srcName, setSrcName] = useState("")
-    let [destName, setDestName] = useState("")
-    let [srcDbName, setSrcDbName] = useState("")
-    let [destDbName, setDestDbName] = useState("")
-
-    return <div className="bg-gray-500 p-4 space-x-3">
-        <label>Source project name</label>
-        <input value={srcName} onChange={e => setSrcName(e.target.value)}></input>
-
-        <label>Source database name</label>
-        <input value={srcDbName} onChange={e => setSrcDbName(e.target.value)}></input>
-
-        <label>Destination project name</label>
-        <input value={destName} onChange={e => setDestName(e.target.value)}></input>
-
-        <label>Destination database name</label>
-        <input value={destDbName} onChange={e => setDestDbName(e.target.value)}></input>
-
-        <button className={`bg-blue-500 p-1 rounded-lg`} onClick={() => {
-            copyBranch(srcName, srcDbName, destName, destDbName, reload)
-        }}>Copy</button>
-    </div>
-}
-
-function Button({children, onClick, color}){
-    return <button className={`${color} text-black rounded-md pr-3 pl-3 pt-2 pb-2`} onClick={onClick}>{children}</button>
-}
-
-function Select({list, children, color, onChange}){
-    return <div className="flex flex-col my-auto m-2">
-        <label className={`pl-1 ${color}`}>{children}</label>
-        <select className={`bg-gray-800 rounded-md text-white border-2 border-black h-8 pl-1 pr-1`} onChange={onChange}>
-            {list.map(e => <option key={e}>{e}</option>)}
-        </select>
+        <Button color="orange">Edit</Button>
+        <Button onClick={() => rebuildBranch(project_id, branch_name, reload)} color="violet">Rebuild</Button>
+        <Button onClick={() => deleteBranch(project_id, branch_name, reload)} color="red">Supprimer</Button>
     </div>
 }
 
@@ -194,14 +151,15 @@ function CreationForm({reload}){
     const editions = ["community", "enterprise"]
 
     return <div className="flex flex-row space-x-8 border-2 m-2 p-2">
-        <Input value={name} onChange={e => setName(e.target.value)}>Name</Input>
+        <Input value={name} onChange={e => setName(e.target.value)}>Nom</Input>
         <Input value={url} onChange={e => setUrl(e.target.value)}>Url</Input>
 
         <Select list={versions} onChange={e => setVersion(e.target.value)}>Version</Select>
         <Select list={editions} onChange={e => setEdition(e.target.value)}>Edition</Select>
 
-        <div className="my-auto">
-            <Button onClick={() => createProject(name, url, version, edition, reload)} color={`bg-green-500 hover:bg-green-600`}>Create</Button>
+        <div className="my-auto space-x-8">
+            <Button onClick={() => createProject(name, url, version, edition, reload)} color="green">Créer</Button>
+            <Button onClick={() => console.log()} color="blue">Importer</Button>
         </div>
     </div>
 }

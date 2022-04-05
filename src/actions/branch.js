@@ -46,4 +46,12 @@ async function copyBranch(srcName, srcDbName, destName, destDbName, reload){
     reload()
 }
 
-export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, copyBranch }
+async function rebuildBranch(project_id, branch_name, reload){
+    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/rebuild`, {
+        method: "POST",
+        headers: new Headers({"Content-Type": "application/json"}),
+    })
+    reload()
+}
+
+export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, copyBranch, rebuildBranch }
