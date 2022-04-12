@@ -3,7 +3,7 @@ async function createBranche(project_id, name, type, reload){
          method: "POST",
          headers: new Headers({"Content-Type": "application/json"}),
          body: JSON.stringify({"name": name, "type": type})
-     }).then(e => e.text())
+     }).then(e => e.text()).catch(err => console.log(err))
      reload()
  }
  
@@ -37,15 +37,6 @@ async function deleteBranch(project_id, branch_name, reload){
     reload()
 }
 
-async function copyBranch(srcName, srcDbName, destName, destDbName, reload){
-    await fetch("https://api.sh.abakus.be/applications/copy", {
-        method: "POST",
-        headers: new Headers({"Content-Type": "application/json"}),
-        body: JSON.stringify({"srcName": srcName, "destName": destName, "srcDbName": srcDbName, "destDbName": destDbName})
-    })
-    reload()
-}
-
 async function rebuildBranch(project_id, branch_name, reload){
     await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/rebuild`, {
         method: "POST",
@@ -54,4 +45,20 @@ async function rebuildBranch(project_id, branch_name, reload){
     reload()
 }
 
-export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, copyBranch, rebuildBranch }
+async function importBranch(project_id, branch_name, file_name, db_name, reload){
+    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/import`, {
+        method: "POST",
+        headers: new Headers({"Content-Type": "application/json"}),
+        body: JSON.stringify({"file_name": file_name, "db_name": db_name})
+    })
+    reload()
+}
+
+async function updateBranch(project_id, branch_name, reload){
+    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/update`, {
+        method: "POST"
+    })
+    reload()
+}
+
+export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, rebuildBranch, importBranch, updateBranch }

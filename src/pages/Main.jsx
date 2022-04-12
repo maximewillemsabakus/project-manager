@@ -8,11 +8,11 @@ import { BsPlusLg } from "react-icons/bs"
 
 import { isValid, signInWithMicrosoft } from "../actions/connect"
 
-import { copyBranch, createBranche, deleteBranch, getBranches, rebuildBranch, startBranch, stopBranch } from "../actions/branch"
+import { createBranche, deleteBranch, getBranches, importBranch, rebuildBranch, startBranch, stopBranch, updateBranch } from "../actions/branch"
 import { createProject, deleteProject, getProjects } from "../actions/project"
 import { getTypes } from "../actions/type"
 
-export function Abakus(){
+export function Main(){
     let [valid, setValid] = useState(false)
 
     return <div className={`pt-20 h-full text-white bg-stone overflow-hidden`}>
@@ -109,34 +109,62 @@ function Project({children, id, git, name, version, edition, reload}){
             <Text>Version : {version}</Text>
             <Text>Edition : {edition}</Text>
             <Button onClick={() => deleteProject(id, reload)} color="red">Supprimer</Button>
-            <Button onClick={() => console.log()} color="purple">Copier</Button>
         </div>
         {children}
     </div>
 }
 
 function Branche({project_id, name, type, url, status, reload}){
-    return <div className={`flex flex-col justify-between h-60 bg-white rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
-        <div className="space-y-4">
-            <Text>BRANCHE : {name}</Text>
-            <Text>TYPE : {type}</Text>
-            <Text>URL : {status === "active" ? <Link href={url}>{url}</Link> : <span>{url}</span>}</Text>
-            <Text>STATUS :
-                <span className={`${status === "active" ? `text-green-500` : `text-red-500`}`}> {status}</span>
-            </Text>
-        </div>
-        <Buttons project_id={project_id} branch_name={name} status={status} reload={reload}></Buttons>
+    let [mode, setMode] = useState("base")
+    let [file, setFile] = useState("")
+    let [db, setDb] = useState("")
+    
+    return <div className={`flex flex-col justify-between h-60 ${type === "Production" ? "bg-red-100": type === "Development" ? "bg-green-100" : "bg-blue-100"} rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
+        {mode === "base" ? 
+            <>
+                <BrancheInfos name={name} type={type} url={url} status={status} />
+                <Buttons project_id={project_id} type={type} branch_name={name} status={status} setMode={setMode} reload={reload}></Buttons>
+            </> : 
+            <>
+                <div className="flex flex-row">
+                    <Input value={file} onChange={(e) => setFile(e.target.value)}>File name</Input>
+                    <Input value={db} onChange={(e) => setDb(e.target.value)}>DB name</Input>
+                </div>
+                <Button color="blue" onClick={() => {
+                    if(file.trim() !== "" && db.trim() !== ""){
+                        importBranch(project_id, name, file, db, reload)
+                        setFile("")
+                        setDb("")
+                    }
+                }}>Import</Button>
+                <Button color="red" onClick={() => setMode("base")}>Close</Button>
+            </>
+        }
     </div>
 }
 
-function Buttons({status, branch_name, project_id, reload}){
+function BrancheInfos({name, type, status, url}){
+    return <div className="space-y-4">
+        <Text>BRANCHE : {name}</Text>
+        <Text>TYPE : {type}</Text>
+        <Text>URL : {status === "active" ? <Link href={url}>{url}</Link> : <span>{url}</span>}</Text>
+        <Text>STATUS :
+            <span className={`${status === "active" ? `text-green-500` : `text-red-500`}`}> {status}</span>
+        </Text>
+    </div>
+}
+
+function Buttons({status, branch_name, project_id, type, setMode, reload}){
     return <div className="flex justify-between space-x-4 p-2 bg-">
         {status === "active" ? 
             <Button onClick={() => stopBranch(project_id, branch_name, reload)} color="yellow">Stop</Button> :
             <Button onClick={() => startBranch(project_id, branch_name, reload)} color="green">Start</Button>  
         }
-        <Button color="orange">Edit</Button>
-        <Button onClick={() => rebuildBranch(project_id, branch_name, reload)} color="violet">Rebuild</Button>
+        <Button onClick={() => updateBranch(project_id, branch_name, reload)} color="orange">Update</Button>
+        {type === "Production" ? 
+            <Button onClick={() => setMode("import")} color="blue">Import</Button> :
+            <Button onClick={() => rebuildBranch(project_id, branch_name, reload)} color="violet">Rebuild</Button>
+        }
         <Button onClick={() => deleteBranch(project_id, branch_name, reload)} color="red">Supprimer</Button>
     </div>
 }
@@ -159,7 +187,6 @@ function CreationForm({reload}){
 
         <div className="my-auto space-x-8">
             <Button onClick={() => createProject(name, url, version, edition, reload)} color="green">Créer</Button>
-            <Button onClick={() => console.log()} color="blue">Importer</Button>
         </div>
     </div>
 }
