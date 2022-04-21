@@ -6,18 +6,22 @@ export async function signInWithMicrosoft(){
     let user
     await signInWithPopup(auth, provider)
         .then(async (result) => {
-            const credential = OAuthProvider.credentialFromResult(result);
-            const accessToken = credential.accessToken;
+            const credential = OAuthProvider.credentialFromResult(result)
+            const accessToken = credential.accessToken
             user = await fetch("https://graph.microsoft.com/v1.0/me", {
                 method: 'GET', 
-                    headers: new Headers({
-                        'Authorization': accessToken, 
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }), 
-                })
-                .then(e => e.text())
-    })
-    return JSON.parse(user)
+                headers: new Headers({
+                    'Authorization': accessToken, 
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }), 
+            })
+            .then(e => e.text())
+            .then(e => JSON.parse(e))
+            user.isConnected = true
+            user.accessToken = accessToken
+            user.message = ""
+        })
+    return isValid(user) ? user : {isConnected: false, message: "Invalid user", user: {}}
 }
 
 export function isValid(user){

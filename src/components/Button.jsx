@@ -1,6 +1,6 @@
-function Button({children, onClick, color}){
+function Button({children, onClick, color, description = ""}){
     let btn_color = getColor(color)
-    return <button className={`${btn_color} text-black rounded-md pr-3 pl-3 pt-2 pb-2`} onClick={onClick}>{children}</button>
+    return <button title={description} className={`${btn_color} text-black rounded-md pr-3 pl-3 pt-2 pb-2`} onClick={onClick}>{children}</button>
 }
 
 function getColor(color){
@@ -23,7 +23,5 @@ function getColor(color){
             return "bg-white"
     }
 }
-
-// 
 
 export { Button }
