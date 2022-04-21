@@ -5,7 +5,7 @@ async function createBranche(project_id, name, type, demoData, user, reload){
             "Content-Type": "application/json",
             'Authorization': user.accessToken
         }),
-        body: JSON.stringify({"name": name, "type": type})  // TODO Add demoData in body
+        body: JSON.stringify({"name": name, "type": type, "demo_data": demoData})
     })
     .then(e => e.text())
     .then(e => JSON.parse(e))
