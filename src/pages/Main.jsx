@@ -15,6 +15,7 @@ import { getConfigs } from "../actions/config"
 
 // TODO Medium : Get les branches sur git
 // TODO Medium : Stocker l'access token dans un cookie et le récupérer lors de la connexion
+// TODO Filtrer les branches par type
 
 export function Main(){
     let [user, setUser] = useState({isConnected: false, message: "", user: {}})
@@ -152,7 +153,7 @@ function BrancheCreator({project_id, reload, user}){
             <div>
                 <Input color={`text-black`} value={name} onChange={e => setName(e.target.value)}>Nom de la branche</Input>
                 <Select color={"text-black"} list={types} onChange={(e) => setType(e.target.value)}>Type</Select>
-                <Checkbox color={"text-black"} value={demoData} onChange={(e) => setDemoData(e.target.value)}>Demo data</Checkbox>
+                <Checkbox color={"text-black"} value={demoData} onChange={(e) => setDemoData(e.target.checked)}>Demo data</Checkbox>
             </div>
             <div className="flex justify-center">
                 <Button onClick={() => {
@@ -160,8 +161,10 @@ function BrancheCreator({project_id, reload, user}){
                         createBranche(project_id, name, type, demoData, user, reload)
                         setName("")
                         setType(types[0])
+                        setDemoData(false)
                     }
                     setActive(false)
+                    setDemoData(false)
                 }} color="green">Créer</Button>
             </div>
         </> : <BsPlusLg className="w-full text-black transform transition-transform ease-in-out hover:scale-100 scale-90" size={100}></BsPlusLg>
@@ -173,12 +176,13 @@ function Branche({project_id, name, type, url, status, user, reload}){
     let [mode, setMode] = useState("base")
     let [file, setFile] = useState("")
     let [db, setDb] = useState("")
+    let [state, setState] = useState(status)
     
     return <div className={`flex flex-col justify-between h-60 w-[30%] ${type === "Production" ? "bg-red-100": type === "Development" ? "bg-green-100" : "bg-blue-100"} rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
         {mode === "base" ? 
             <>
-                <BrancheInfos name={name} type={type} url={url} status={status} />
-                <Buttons project_id={project_id} user={user} type={type} branch_name={name} status={status} setMode={setMode} reload={reload}></Buttons>
+                <BrancheInfos name={name} type={type} url={url} status={state} />
+                <Buttons project_id={project_id} setState={setState} user={user} type={type} branch_name={name} status={state} setMode={setMode} reload={reload}></Buttons>
             </> : mode === "delete" ? 
             <>
                 <div className="text-center font-medium text-lg">
@@ -217,7 +221,7 @@ function BrancheInfos({name, type, status, url}){
     </div>
 }
 
-function Buttons({status, branch_name, project_id, type, setMode, user, reload}){
+function Buttons({status, branch_name, project_id, type, setMode, user, setState, reload}){
     return <div className="flex justify-between space-x-4 p-2">
         {status === "active" ? 
             <Button onClick={() => stopBranch(project_id, branch_name, user, reload)} color="yellow" description="Arrête la branche">Stop</Button> :
@@ -227,7 +231,7 @@ function Buttons({status, branch_name, project_id, type, setMode, user, reload})
         {type === "Production" ? 
             <Button onClick={() => setMode("import")} color="blue" description="Permet d'importer une base de donnée dans la branche">Import</Button> : 
             type === "Test" ?
-                <Button onClick={() => rebuildBranch(project_id, branch_name, user, reload)} color="violet" description="Reconstruit la branche sur base de la branche de production">Rebuild</Button> : 
+                <Button onClick={() => rebuildBranch(project_id, branch_name, user, setState, reload)} color="violet" description="Reconstruit la branche sur base de la branche de production">Rebuild</Button> : 
                 ""
         }
         <Button onClick={() => setMode("delete")} color="red" description="Supprime la branche">Supprimer</Button>

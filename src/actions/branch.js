@@ -1,4 +1,6 @@
 async function createBranche(project_id, name, type, demoData, user, reload){
+    demoData = FirstLetterUpperCase(`${demoData}`)
+    
     let key = await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/create`, {
         method: "POST",
         headers: new Headers({
@@ -24,12 +26,30 @@ async function createBranche(project_id, name, type, demoData, user, reload){
     reload()
 }
 
+function FirstLetterUpperCase(string){
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function sleep(time){
     return new Promise(resolve => setTimeout(resolve, time))
 }
 
 async function getBranchCreationStatus(project_id, user, key){
-    return await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/status`, {
+    return await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/creation_status`, {
+        method: "POST",
+        headers: new Headers({
+            "Content-Type": "application/json",
+            'Authorization': user.accessToken
+        }),
+        body: JSON.stringify({"key": key})
+    })
+    .then(e => e.text())
+    .then(e => JSON.parse(e))
+    .then(e => e.status)
+}
+
+async function getBranchRebuildStatus(project_id, user, key){
+    return await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/rebuild_status`, {
         method: "POST",
         headers: new Headers({
             "Content-Type": "application/json",
@@ -86,14 +106,33 @@ async function deleteBranch(project_id, branch_name, user, reload){
     reload()
 }
 
-async function rebuildBranch(project_id, branch_name, user, reload){
-    await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/rebuild`, {
+async function rebuildBranch(project_id, branch_name, user, setState, reload){
+    let key = await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/rebuild`, {
         method: "POST",
         headers: new Headers({
             "Content-Type": "application/json",
             'Authorization': user.accessToken
         }),
     })
+    .then(e => e.text())
+    .then(e => JSON.parse(e))
+    .then(e => e.key)
+    console.log(key)
+
+    // Wait for the branch to be rebuilt
+    let status = await getBranchRebuildStatus(project_id, user, key)
+    setState(status === "PENDING" ? "rebuilding ..." : status === "FAILED" ? "rebuild failed" : "active")
+    while(status == "PENDING"){
+        console.log("Branch rebuild status : " + status)
+        await sleep(3000)
+        status = await getBranchRebuildStatus(project_id, user, key)
+        setState(status === "PENDING" ? "rebuilding ..." : status === "FAILED" ? "rebuild failed" : "active")
+    }
+    if(status === "FAILED"){
+        setState("rebuild failed")
+        alert("Branch rebuild failed")
+    }
+    setState(status === "FAILED" ? "rebuild failed" : "active")
     reload()
 }
 
