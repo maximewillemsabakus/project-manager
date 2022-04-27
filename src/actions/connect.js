@@ -21,7 +21,12 @@ export async function signInWithMicrosoft(){
             user.accessToken = accessToken
             user.message = ""
         })
-    return isValid(user) ? user : {isConnected: false, message: "Invalid user", user: {}}
+    if (isValid) {
+        sessionStorage.setItem('token', user.accessToken)
+        return user
+    } else {
+        return {isConnected: false, message: "Invalid user", user: {}}
+    }
 }
 
 export function isValid(user){

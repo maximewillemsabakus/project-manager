@@ -1,4 +1,4 @@
-async function createBranche(project_id, name, type, demoData, user, reload){
+async function createBranche(project_id, name, type, demoData, description, user, reload){
     demoData = FirstLetterUpperCase(`${demoData}`)
     
     let key = await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/create`, {
@@ -7,7 +7,7 @@ async function createBranche(project_id, name, type, demoData, user, reload){
             "Content-Type": "application/json",
             'Authorization': user.accessToken
         }),
-        body: JSON.stringify({"name": name, "type": type, "demo_data": demoData})
+        body: JSON.stringify({"name": name, "type": type, "demo_data": demoData, "description": description})
     })
     .then(e => e.text())
     .then(e => JSON.parse(e))
@@ -20,10 +20,33 @@ async function createBranche(project_id, name, type, demoData, user, reload){
         await sleep(3000)
         status = await getBranchCreationStatus(project_id, user, key)
     }
-    if(status === "FAILED"){
+
+    if(status === "FAILURE"){
         alert("Branch creation failed")
     }
     reload()
+}
+
+async function logBranch(project_id, branch_name, user){
+    let logs = await fetch(`https://api.sh.abakus.be/projects/${project_id}/branches/${branch_name}/logs`, {
+        method: "GET",
+        headers: new Headers({
+            "Content-Type": "application/json",
+            'Authorization': user.accessToken
+        }),
+    })
+    .then(e => e.text())
+    .then(e => JSON.parse(e))
+    .then(e => e.logs)
+
+    printLogs(logs.app, "APP")
+    printLogs(logs.db, "DB")
+}
+
+function printLogs(text, type){
+    console.log(`------------------ LOGS ${type} START ------------------`)
+    console.log(text)
+    console.log(`------------------ LOGS ${type} END ------------------`)
 }
 
 function FirstLetterUpperCase(string){
@@ -117,22 +140,21 @@ async function rebuildBranch(project_id, branch_name, user, setState, reload){
     .then(e => e.text())
     .then(e => JSON.parse(e))
     .then(e => e.key)
-    console.log(key)
 
     // Wait for the branch to be rebuilt
     let status = await getBranchRebuildStatus(project_id, user, key)
-    setState(status === "PENDING" ? "rebuilding ..." : status === "FAILED" ? "rebuild failed" : "active")
+    setState(status === "PENDING" ? "rebuilding ..." : status === "FAILURE" ? "rebuild failed" : "active")
     while(status == "PENDING"){
         console.log("Branch rebuild status : " + status)
         await sleep(3000)
         status = await getBranchRebuildStatus(project_id, user, key)
-        setState(status === "PENDING" ? "rebuilding ..." : status === "FAILED" ? "rebuild failed" : "active")
+        setState(status === "PENDING" ? "rebuilding ..." : status === "FAILURE" ? "rebuild failed" : "active")
     }
-    if(status === "FAILED"){
+    if(status === "FAILURE"){
         setState("rebuild failed")
         alert("Branch rebuild failed")
     }
-    setState(status === "FAILED" ? "rebuild failed" : "active")
+    setState(status === "FAILURE" ? "rebuild failed" : "active")
     reload()
 }
 
@@ -158,4 +180,34 @@ async function updateBranch(project_id, branch_name, user, reload){
     reload()
 }
 
-export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, rebuildBranch, importBranch, updateBranch }
+async function getBranchesFromGit(project_id, url, user){
+    let config = await getConfig(project_id, user)
+
+    let response = await fetch(`https://api.github.com/repos/${url}/branches`, {
+        method: "GET",
+        headers: new Headers({
+            'Authorization': `token ${config.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }),
+    })
+    .then(e => e.text())
+    .then(e => JSON.parse(e))
+    .then(e => e.map(e => e.name))
+
+    return response
+}
+
+async function getConfig(project_id, user){
+    return await fetch(`https://api.sh.abakus.be/configs/${project_id}`, {
+        method: "GET",
+        headers: new Headers({
+            'Authorization': user.accessToken
+        }),
+    })
+    .then(e => e.text())
+    .then(e => JSON.parse(e))
+}
+
+
+
+export { getBranches, createBranche, startBranch, stopBranch, deleteBranch, rebuildBranch, importBranch, updateBranch, logBranch, getBranchesFromGit }

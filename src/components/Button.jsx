@@ -1,3 +1,8 @@
+import { useState } from "react"
+import { BsPlusLg } from "react-icons/bs"
+
+import { AiFillInfoCircle, AiOutlineInfoCircle } from "react-icons/ai"
+
 function Button({children, onClick, color, description = ""}){
     let btn_color = getColor(color)
     return <button title={description} className={`${btn_color} text-black rounded-md pr-3 pl-3 pt-2 pb-2`} onClick={onClick}>{children}</button>
@@ -24,4 +29,21 @@ function getColor(color){
     }
 }
 
-export { Button }
+function PlusButton({onClick}){
+    let [isHover, setIsHover] = useState(false)
+
+    return <div className="flex flex-col justify-center h-full" onClick={onClick} onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
+        <BsPlusLg className={`${isHover ? "text-slate-800" : "text-slate-700"} mx-auto`} size={isHover ? 120 : 100}></BsPlusLg>
+    </div>
+}
+
+function InfoButton({description}){
+    let [isHover, setIsHover] = useState(false)
+
+    return <div className="text-blue-500 cursor-pointer" title={description} onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
+        {isHover ? <AiFillInfoCircle></AiFillInfoCircle> : 
+            <AiOutlineInfoCircle></AiOutlineInfoCircle>}
+    </div>
+}
+
+export { Button, PlusButton, InfoButton }

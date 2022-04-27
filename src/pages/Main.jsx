@@ -1,31 +1,48 @@
 import { useEffect, useState } from "react"
 
-import { Button } from "../components/Button"
+import { Button, InfoButton, PlusButton } from "../components/Button"
 import { Link, Text } from "../components/Text"
-import { Checkbox, Input, Select } from "../components/Inputs"
-
-import { BsPlusLg } from "react-icons/bs"
+import { Checkbox, Input, Select, TextArea } from "../components/Inputs"
 
 import { signInWithMicrosoft } from "../actions/connect"
 
-import { createBranche, deleteBranch, getBranches, importBranch, rebuildBranch, startBranch, stopBranch, updateBranch } from "../actions/branch"
+import { createBranche, deleteBranch, getBranches, getBranchesFromGit, importBranch, logBranch, rebuildBranch, startBranch, stopBranch, updateBranch } from "../actions/branch"
 import { createProject, deleteProject, getProjects } from "../actions/project"
 import { getTypes } from "../actions/type"
 import { getConfigs } from "../actions/config"
+import jwt_decode from "jwt-decode"
+import { Col, Row } from "../components/Spacement"
 
-// TODO Medium : Get les branches sur git
-// TODO Medium : Stocker l'access token dans un cookie et le récupérer lors de la connexion
 // TODO Filtrer les branches par type
 
 export function Main(){
-    let [user, setUser] = useState({isConnected: false, message: "", user: {}})
-    let [loading, setLoading] = useState(false)
+    let [user, setUser] = useState({isConnected: false, message: ""})
+    
+    useEffect(() => {
+        async function reload(){
+            let token = sessionStorage.getItem("token")
+            if(token !== null){
+                var decoded = jwt_decode(token);
+                if(Date.now() > (decoded.exp * 1000)){
+                    setUser({isConnected: false, message: "Votre session a expiré"})
+                } else {
+                    setUser({isConnected: true, message: "", accessToken: token})
+                }
+            } else {
+                setUser({isConnected: false, message: ""})
+            }
+        }
+        setInterval(reload, 60000)
+        reload()
+        return () => {
+            clearInterval(reload)
+        }
+    }, [])
     
     return <div className={`h-full text-white bg-stone overflow-hidden`}>
         <h1 className="flex font-medium text-6xl justify-center h-1/6"><div className="my-auto">Abakus.sh</div></h1>
-        {loading ? <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"></svg> : ""}
         {user.isConnected ? 
-            <Projects user={user} setLoading={setLoading}/> : 
+            <Projects user={user} /> : 
             <div className="flex justify-center">
                 <Button onClick={async () => setUser(await signInWithMicrosoft())} color="blue">Connexion</Button>
             </div>
@@ -34,7 +51,7 @@ export function Main(){
     </div>
 }
 
-function Projects({loading, user}){
+function Projects({user}){
     let [projects, setProjects] = useState([])
     let reloads = async () => setProjects(await getProjects(user))
     useEffect(() => {
@@ -48,7 +65,7 @@ function Projects({loading, user}){
         <CreationForm reload={reloads} user={user}></CreationForm>
         {projects.length === 0 ? <div className="m-2"><Text>Aucun projets</Text></div>: projects.map(project => 
             <Project key={project.id} user={user} reload={reloads} id={project.id} name={project.name} git={project.git} version={project.version} edition={project.edition}>
-                <Branches project_id={project.id} user={user} />
+                <Branches project_id={project.id} project_url={project.git} user={user} />
             </Project>
         )}
     </div>
@@ -87,7 +104,7 @@ function CreationForm({reload, user}){
             </div>
             <div className="flex flex-row justify-center space-x-8">
                 <Select list={versions} onChange={e => setVersion(e.target.value)}>Version</Select>
-                <Select list={editions} onChange={e => setEdition(e.target.value)}>Edition</Select>
+                <Select list={editions} onChange={e => setEdition(e.target.value)}>Édition</Select>
                 <Select list={configs.map(c => c.user)} onChange={e => setConfig(configs.find((c) => c.user === e.target.value).id)}>Config</Select>
             </div>
             <div className="mx-auto">
@@ -98,22 +115,21 @@ function CreationForm({reload, user}){
 }
 
 function Project({children, id, git, name, version, edition, user, reload}){
-    return <div className="border-2 mt-2 ml-2 mr-2 p-2">
+    return <div className="border-2 mt-2 ml-2 mr-2 p-2 overflow-x-auto">
         <div className="flex flex-row space-x-8 mb-2 ">
             <Text>Nom : {name}</Text>
             <Text>Git : <Link href={`https://github.com/${git}`}>{git}</Link></Text>
             <Text>Version : {version}</Text>
-            <Text>Edition : {edition}</Text>
+            <Text>Édition : {edition}</Text>
             <Button onClick={() => deleteProject(id, user, reload)} color="red">Supprimer</Button>
         </div>
         {children}
     </div>
 }
 
-
-function Branches({project_id, user}){
+function Branches({project_id, project_url, user}){
     let [branches, setBranches] = useState([])
-    let reloadsBranches = async (project_id) => await getBranches(project_id, user)
+    let reloadsBranches = async () => setBranches(await getBranches(project_id, user))
 
     useEffect(() => {
         async function reload(){
@@ -123,19 +139,21 @@ function Branches({project_id, user}){
     }, [project_id])
     
     return <div className="flex flex-row space-x-4">
-        <BrancheCreator project_id={project_id} user={user} reload={async () => setBranches(await reloadsBranches(project_id, user))} />
+        <BrancheCreator project_id={project_id} project_url={project_url} user={user} reload={reloadsBranches} />
         {branches.length === 0 ? "": branches.map(branch => 
-            <Branche key={branch.name} user={user} project_id={project_id} name={branch.name} type={branch.type} url={branch.url} status={branch.status} reload={async () => setBranches(await reloadsBranches(project_id))} />
+            <Branche key={branch.name} user={user} project_id={project_id} name={branch.name} type={branch.type} description={branch.description} url={branch.url} status={branch.status} reload={reloadsBranches} />
         )}
     </div>
 }
 
-function BrancheCreator({project_id, reload, user}){
+function BrancheCreator({project_id, project_url, reload, user}){
     let [name, setName] = useState("")
     let [type, setType] = useState("")
     let [types, setTypes] = useState([])
     let [active, setActive] = useState(false)
     let [demoData, setDemoData] = useState(false)
+    let [description, setDescription] = useState("")
+    let [names, setNames] = useState([])
 
     useEffect(() => {
         async function loadTypes(){
@@ -148,40 +166,58 @@ function BrancheCreator({project_id, reload, user}){
         setType(types[0])
     }, [types])
 
-    return <div className={`flex flex-col justify-around h-60 w-60 bg-gradient-to-t rounded-3xl ${active ? (type === "Production" ? "bg-red-100" : type === "Development" ? "bg-green-100" : "bg-blue-100") : "cursor-pointer from-slate-400 to-blue-200"}`} onClick={() => active ? "" : setActive(true)} >
-        {active ? <>
-            <div>
-                <Input color={`text-black`} value={name} onChange={e => setName(e.target.value)}>Nom de la branche</Input>
-                <Select color={"text-black"} list={types} onChange={(e) => setType(e.target.value)}>Type</Select>
+    useEffect(() => {
+        async function loadNames(){
+            setNames(await getBranchesFromGit(project_id, project_url, user))
+        }
+        loadNames()
+    }, [])
+
+    useEffect(() => {
+        setName(names[0])
+    }, [names])
+
+    return <div className="bg-gradient-to-b from-sky-100 to-slate-300 w-96 h-60 rounded-3xl">
+        {active ? <Col className="justify-around h-full">
+            <Row className="justify-around">
+                <Select color={"text-black"} list={names} onChange={(e) => setName(e.target.value)}>Nom de la branche</Select>
+                <Select color={"text-black"} list={types} onChange={(e) => setType(e.target.value)}>Type de branche</Select>
+            </Row>
+            <Row className="justify-center">
+                <TextArea color={"text-black"} value={description} onChange={(e) => setDescription(e.target.value)}>Description</TextArea>
                 <Checkbox color={"text-black"} value={demoData} onChange={(e) => setDemoData(e.target.checked)}>Demo data</Checkbox>
-            </div>
-            <div className="flex justify-center">
+            </Row>
+            <Row className="justify-center space-x-8">
+                <Button color="yellow" onClick={() => setActive(false)}>Annuler</Button>
                 <Button onClick={() => {
-                    if(name.trim() !== ""){
-                        createBranche(project_id, name, type, demoData, user, reload)
-                        setName("")
+                    if(name.trim() !== "" && type.trim() !== ""){
+                        createBranche(project_id, name, type, demoData, description, user, reload)
+                        setName(names[0])
                         setType(types[0])
-                        setDemoData(false)
                     }
                     setActive(false)
                     setDemoData(false)
+                    setDescription("")
                 }} color="green">Créer</Button>
-            </div>
-        </> : <BsPlusLg className="w-full text-black transform transition-transform ease-in-out hover:scale-100 scale-90" size={100}></BsPlusLg>
-        }
-     </div>
+            </Row>
+        </Col> : <PlusButton onClick={() => setActive(true)}/>}
+    </div>
 }
 
-function Branche({project_id, name, type, url, status, user, reload}){
+function Branche({project_id, name, type, url, status, description, user, reload}){
     let [mode, setMode] = useState("base")
     let [file, setFile] = useState("")
     let [db, setDb] = useState("")
     let [state, setState] = useState(status)
+
+    useEffect(() => {
+        setState(status)
+    }, [status])
     
-    return <div className={`flex flex-col justify-between h-60 w-[30%] ${type === "Production" ? "bg-red-100": type === "Development" ? "bg-green-100" : "bg-blue-100"} rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
+    return <div className={`flex flex-col justify-between h-60 w-[31%] ${type === "Production" ? "bg-red-100": type === "Development" ? "bg-green-100" : "bg-blue-100"} rounded-3xl text-black pt-3 pb-3 pl-4 pr-4`}>
         {mode === "base" ? 
             <>
-                <BrancheInfos name={name} type={type} url={url} status={state} />
+                <BrancheInfos name={name} type={type} url={url} status={state} description={description} />
                 <Buttons project_id={project_id} setState={setState} user={user} type={type} branch_name={name} status={state} setMode={setMode} reload={reload}></Buttons>
             </> : mode === "delete" ? 
             <>
@@ -194,8 +230,8 @@ function Branche({project_id, name, type, url, status, user, reload}){
             :
             <>
                 <div className="flex flex-row">
-                    <Input value={file} onChange={(e) => setFile(e.target.value)}>File name</Input>
-                    <Input value={db} onChange={(e) => setDb(e.target.value)}>DB name</Input>
+                    <Input value={file} onChange={(e) => setFile(e.target.value)}>Nom du fichier</Input>
+                    <Input value={db} onChange={(e) => setDb(e.target.value)}>Nom de la BD</Input>
                 </div>
                 <Button color="blue" onClick={() => {
                     if(file.trim() !== "" && db.trim() !== ""){
@@ -210,13 +246,18 @@ function Branche({project_id, name, type, url, status, user, reload}){
     </div>
 }
 
-function BrancheInfos({name, type, status, url}){
+function BrancheInfos({name, type, status, url, description}){
     return <div className="space-y-4">
-        <Text>BRANCHE : {name}</Text>
+        <Row className="justify-between">
+            <Text>BRANCHE : {name}</Text>
+            {description.trim() === "" ? <></> : 
+                <InfoButton description={description}></InfoButton>
+            }
+        </Row>
         <Text>TYPE : {type}</Text>
         <Text>URL : {status === "active" ? <Link href={url}>{url}</Link> : <span>{url}</span>}</Text>
         <Text>STATUS :
-            <span className={`${status === "active" ? `text-green-500` : `text-red-500`}`}> {status}</span>
+            <span className={`${status === "active" ? `text-green-500` : status === "inactive" ? `text-red-500` : `text-purple-500`}`}> {status}</span>
         </Text>
     </div>
 }
@@ -235,5 +276,6 @@ function Buttons({status, branch_name, project_id, type, setMode, user, setState
                 ""
         }
         <Button onClick={() => setMode("delete")} color="red" description="Supprime la branche">Supprimer</Button>
+        <Button onClick={() => logBranch(project_id, branch_name, user)} color="blue" description="Affiche les logs de la branche">Log</Button>
     </div>
 }
