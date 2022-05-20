@@ -5,7 +5,7 @@ import { AiFillInfoCircle, AiOutlineInfoCircle } from "react-icons/ai"
 
 function Button({children, onClick, color, description = ""}){
     let btn_color = getColor(color)
-    return <button title={description} className={`${btn_color} text-black rounded-md pr-3 pl-3 pt-2 pb-2`} onClick={onClick}>{children}</button>
+    return <button title={description} className={`${btn_color} text-black rounded-md pr-3 pl-3 pt-2 pb-2 m-1`} onClick={onClick}>{children}</button>
 }
 
 function getColor(color){
@@ -25,7 +25,7 @@ function getColor(color){
         case "orange":
             return "bg-gradient-to-t from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500"
         default:
-            return "bg-white"
+            return "bg-gradient-to-t from-slate-100 to-white hover:from-slate-200 hover:to-gray-50"
     }
 }
 

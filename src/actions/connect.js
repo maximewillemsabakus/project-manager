@@ -21,11 +21,11 @@ export async function signInWithMicrosoft(){
             user.accessToken = accessToken
             user.message = ""
         })
-    if (isValid) {
+    if (isValid(user)) {
         sessionStorage.setItem('token', user.accessToken)
         return user
     } else {
-        return {isConnected: false, message: "Invalid user", user: {}}
+        return {isConnected: false, message: "Invalid user"}
     }
 }
 

@@ -1,5 +1,7 @@
+import { API_URL } from "../index.js"
+
 export async function getTypes(user){
-    return fetch(`https://api.sh.abakus.be/types/`, {
+    return fetch(`${API_URL}/types/`, {
         method: "GET",
         headers: new Headers({
             'Authorization': user.accessToken

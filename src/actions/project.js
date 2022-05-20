@@ -1,5 +1,7 @@
+import { API_URL } from "../index.js"
+
 async function getProjects(user){
-    return await fetch("https://api.sh.abakus.be/projects/", {
+    return await fetch(`${API_URL}/projects/`, {
         method: "GET",
         headers: new Headers({
             'Authorization': user.accessToken
@@ -10,7 +12,7 @@ async function getProjects(user){
 }
 
 async function createProject(name, url, version, edition, config, user, reload){
-    await fetch("https://api.sh.abakus.be/projects/create", {
+    await fetch(`${API_URL}/projects/create`, {
         method: "POST",
         headers: new Headers({
             "Content-Type": "application/json",
@@ -22,7 +24,7 @@ async function createProject(name, url, version, edition, config, user, reload){
 }
 
 async function deleteProject(id, user, reload) {
-    await fetch(`https://api.sh.abakus.be/projects/${id}/delete`, {
+    await fetch(`${API_URL}/projects/${id}/delete`, {
         method: 'DELETE',
         headers: new Headers({
             "Content-Type": "application/json",
